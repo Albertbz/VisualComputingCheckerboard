@@ -1,0 +1,7 @@
+build
+build-debug
+build-release
+.github
+bench-results
+docs
+.DS_Store
