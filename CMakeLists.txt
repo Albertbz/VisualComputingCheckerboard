@@ -18,6 +18,7 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
     "external"
     ${GLFW_INCLUDE_DIRS}
+    # include
     .
 )
 
@@ -38,30 +39,11 @@ add_definitions(
     -D_CRT_SECURE_NO_WARNINGS
 )
 
-add_executable(Camera
-    common/Shader.cpp
-    common/Shader.hpp
-	common/ColorShader.cpp
-    common/ColorShader.hpp
-    common/Camera.cpp
-    common/Camera.hpp
-    common/Scene.cpp
-    common/Scene.hpp
-    common/Object.cpp
-    common/Object.hpp
-    common/Triangle.cpp
-    common/Triangle.hpp
-	common/Texture.cpp
-    common/Texture.hpp
-	common/TextureShader.cpp
-    common/TextureShader.hpp
-	common/Quad.cpp
-    common/Quad.hpp
-    common/Cube.cpp
-    common/Cube.hpp
-    Camera/cameraQuad.cpp
+add_executable(AR
+    AR/AR.cpp
+    external/glad/glad.c
 )
-target_link_libraries(Camera
+target_link_libraries(AR
     ${ALL_LIBS}
 )
 

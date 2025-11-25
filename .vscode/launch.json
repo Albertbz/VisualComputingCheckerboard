@@ -8,10 +8,10 @@
       "name": "(lldb) Launch",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/Camera",
+      "program": "${workspaceFolder}/build/AR",
       "args": [],
       "stopAtEntry": false,
-      "cwd": "${workspaceFolder}/Camera",
+      "cwd": "${workspaceFolder}/AR",
       "environment": [],
       "externalConsole": false,
       "MIMode": "lldb"
