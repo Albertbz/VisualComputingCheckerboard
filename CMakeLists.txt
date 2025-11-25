@@ -38,12 +38,8 @@ add_definitions(
     -D_CRT_SECURE_NO_WARNINGS
 )
 
-
-# --------------------------------------------------------------------------
-# Part 03 - OpenCV camera feed on textured quad
-# --------------------------------------------------------------------------
-add_executable(Webcam
-common/Shader.cpp
+add_executable(Camera
+    common/Shader.cpp
     common/Shader.hpp
 	common/ColorShader.cpp
     common/ColorShader.hpp
@@ -61,13 +57,18 @@ common/Shader.cpp
     common/TextureShader.hpp
 	common/Quad.cpp
     common/Quad.hpp
-    filters/Filters.cpp
-    filters/Filters.hpp
-    transforms/Transforms.cpp
-    transforms/Transforms.hpp
-    Webcam/webcamQuad.cpp
+    common/Cube.cpp
+    common/Cube.hpp
+    Camera/cameraQuad.cpp
 )
-target_link_libraries(Webcam
+target_link_libraries(Camera
+    ${ALL_LIBS}
+)
+
+add_executable(CameraCalibration
+    CameraCalibration/camera_calibration.cpp
+)
+target_link_libraries(CameraCalibration
     ${ALL_LIBS}
 )
 
