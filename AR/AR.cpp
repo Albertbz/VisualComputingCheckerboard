@@ -201,7 +201,25 @@ int main() {
   cv::Mat distCoeffs = (cv::Mat_<double>(5, 1) << -0.17611576780242291,
                         1.7357972971751359, 0., 0., -5.4837634455342661);
 
-  // --- Main Loop ---
+  // --- CALCULATE PROJECTION MATRIX USING CAMERA INTRINSICS ---
+  float nearPlane = 0.01f;
+  float farPlane = 100.0f;
+  float fx = cameraMatrix.at<double>(0, 0);
+  float fy = cameraMatrix.at<double>(1, 1);
+  float cx = cameraMatrix.at<double>(0, 2);
+  float cy = cameraMatrix.at<double>(1, 2);
+
+  glm::mat4 projection = glm::mat4(0.0f);
+  projection[0][0] = 2.0f * fx / frameWidth;
+  projection[1][1] = 2.0f * fy / frameHeight;
+  projection[2][0] = 1.0f - (2.0f * cx) / frameWidth;
+  projection[2][1] = (2.0f * cy) / frameHeight -
+                     1.0f; // Flipped for OpenGL's Y-up coord system
+  projection[2][2] = -(farPlane + nearPlane) / (farPlane - nearPlane);
+  projection[2][3] = -1.0f;
+  projection[3][2] = -2.0f * farPlane * nearPlane / (farPlane - nearPlane);
+
+    // --- Main Loop ---
   while (!glfwWindowShouldClose(window)) {
     cv::Mat frame;
     cap >> frame;
@@ -277,24 +295,6 @@ int main() {
     if (found) {
       glUseProgram(cubeShaderProgram);
 
-      // --- CALCULATE PROJECTION MATRIX USING CAMERA INTRINSICS ---
-      float nearPlane = 0.01f;
-      float farPlane = 100.0f;
-      float fx = cameraMatrix.at<double>(0, 0);
-      float fy = cameraMatrix.at<double>(1, 1);
-      float cx = cameraMatrix.at<double>(0, 2);
-      float cy = cameraMatrix.at<double>(1, 2);
-
-      glm::mat4 projection = glm::mat4(0.0f);
-      projection[0][0] = 2.0f * fx / frameWidth;
-      projection[1][1] = 2.0f * fy / frameHeight;
-      projection[2][0] = 1.0f - (2.0f * cx) / frameWidth;
-      projection[2][1] = (2.0f * cy) / frameHeight -
-                         1.0f; // Flipped for OpenGL's Y-up coord system
-      projection[2][2] = -(farPlane + nearPlane) / (farPlane - nearPlane);
-      projection[2][3] = -1.0f;
-      projection[3][2] = -2.0f * farPlane * nearPlane / (farPlane - nearPlane);
-
       glm::mat4 view = glm::mat4(1.0f);
 
       cv::Mat R;
@@ -312,7 +312,7 @@ int main() {
       float scale = 0.025f;
 
       // Translate the model so that the cube has its corner at the origin
-      // (using half the cube size since we scaled it down)
+      // (using half the cube size since we scale it down)
       model = glm::translate(
           model, glm::vec3(scale / 2.0f, scale / 2.0f, -scale / 2.0f));
 
