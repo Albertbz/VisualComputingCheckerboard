@@ -137,7 +137,7 @@ int main() {
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   // GUI-controlled parameters
-  glm::vec3 guiLightDir = glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f));
+  glm::vec3 guiLightDir = glm::normalize(glm::vec3(0.5f, 1.0f, -0.3f));
   glm::vec3 guiBaseColor = glm::vec3(0.8f, 0.8f, 0.8f);
 
   // --- OpenCV Capture ---
@@ -494,7 +494,7 @@ int main() {
       model[3][1] = tvec.at<double>(1, 0);
       model[3][2] = tvec.at<double>(2, 0);
 
-      float scale = 0.025f;
+      float scale = 0.050f;
 
       // Translate the model so that the cube has its corner at the origin
       // (using half the cube size since we scale it down)
@@ -502,7 +502,7 @@ int main() {
           model, glm::vec3(scale / 2.0f, scale / 2.0f, -scale / 2.0f));
 
       // Translate an additional amount to center the cube on the checkerboard
-      model = glm::translate(model, glm::vec3(0.1f, 0.05f, 0.0f));
+      model = glm::translate(model, glm::vec3(0.075f, 0.05f, 0.0f));
 
       // Scale down the cube
       model = glm::scale(model, glm::vec3(scale));
@@ -546,8 +546,8 @@ int main() {
       // Transform the GUI light direction into camera space (same as for
       // shading)
       glm::vec3 markerDir = glm::normalize(glm::mat3(model) * guiLightDir);
-      // Distance from cube to marker (in meters). 0.10 = 10 cm
-      float markerDistance = 0.10f;
+      // Distance from cube to marker (in meters). 0.20 = 20 cm
+      float markerDistance = 0.20f;
       glm::vec3 markerPos = cubePos + markerDir * markerDistance;
 
       // Build marker model matrix (positioned in camera space)
