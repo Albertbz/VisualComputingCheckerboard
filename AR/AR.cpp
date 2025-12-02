@@ -11,6 +11,11 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <fstream>
+#include <algorithm>
+#include <numeric>
+#include <iomanip>
 
 // Dear ImGui (vendored under external/imgui/)
 #include "imgui.h"
@@ -209,6 +214,13 @@ int main() {
   glUseProgram(shaderProgram);
   glUniform1i(glGetUniformLocation(shaderProgram, "frameTex"), 0);
 
+  // --- Logging for measurements ---
+  std::ofstream arLog("ar_log.csv");
+  arLog << "frame,cap_ms,pnp_ms,upload_ms,swap_ms,found,t_x,t_y,t_z,r_x,r_y,r_"
+           "z,reproj_mean,reproj_median,reproj_max\n";
+  auto startTime = std::chrono::high_resolution_clock::now();
+  int frameIndex = 0;
+
   // --- Cube Vertex Data (duplicate vertices per face, include normals) ---
   // 24 vertices: 6 faces * 4 vertices per face. Each vertex: position (3),
   // normal (3)
@@ -382,6 +394,7 @@ int main() {
   while (!glfwWindowShouldClose(window)) {
     cv::Mat frame;
     cap >> frame;
+    auto t_capture = std::chrono::high_resolution_clock::now();
     if (frame.empty())
       break;
 
@@ -425,6 +438,9 @@ int main() {
     cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
 
     cv::Mat rvec, tvec; // Declare here to be in scope for cube rendering
+    // Per-frame measurement values (defaults for missing data)
+    double reproj_mean = -1.0, reproj_median = -1.0, reproj_max = -1.0;
+    auto t_pnp = t_capture;
 
     if (found) {
       cv::cornerSubPix(
@@ -441,6 +457,33 @@ int main() {
 
       // 4. Get correct pose data from the un-flipped corners
       cv::solvePnP(objectPoints, corners, cameraMatrix, distCoeffs, rvec, tvec);
+
+      // timestamp after pose estimation
+      t_pnp = std::chrono::high_resolution_clock::now();
+
+      // Compute reprojection error (pixels) between projected object points and
+      // detected corners
+      std::vector<cv::Point2f> projPoints;
+      cv::projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs,
+                        projPoints);
+      std::vector<double> reprojErrors;
+      reprojErrors.reserve(projPoints.size());
+      for (size_t i = 0; i < projPoints.size(); ++i) {
+        double dx = projPoints[i].x - corners[i].x;
+        double dy = projPoints[i].y - corners[i].y;
+        reprojErrors.push_back(std::sqrt(dx * dx + dy * dy));
+      }
+      if (!reprojErrors.empty()) {
+        reproj_mean =
+            std::accumulate(reprojErrors.begin(), reprojErrors.end(), 0.0) /
+            reprojErrors.size();
+        std::vector<double> tmp = reprojErrors;
+        size_t mid = tmp.size() / 2;
+        std::nth_element(tmp.begin(), tmp.begin() + mid, tmp.end());
+        reproj_median = tmp[mid];
+        reproj_max =
+            *std::max_element(reprojErrors.begin(), reprojErrors.end());
+      }
 
       // Draw axes for visualization on the un-flipped color frame
       // std::vector<cv::Point3f> axisPoints;
@@ -466,6 +509,8 @@ int main() {
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame.cols, frame.rows, GL_RGB,
                     GL_UNSIGNED_BYTE, frame.data);
+    glFinish();
+    auto t_upload = std::chrono::high_resolution_clock::now();
 
     // Clear buffers and render the video background (happens every frame)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -578,8 +623,43 @@ int main() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+    // Ensure all GL work is finished, then swap buffers and timestamp
+    glFinish();
     glfwSwapBuffers(window);
+    auto t_swap = std::chrono::high_resolution_clock::now();
     glfwPollEvents();
+
+    // Convert timestamps to milliseconds since start
+    auto to_ms = [&](const std::chrono::high_resolution_clock::time_point &tp) {
+      return std::chrono::duration<double, std::milli>(tp - startTime).count();
+    };
+
+    double cap_ms = to_ms(t_capture);
+    double pnp_ms = to_ms(t_pnp);
+    double upload_ms = to_ms(t_upload);
+    double swap_ms = to_ms(t_swap);
+
+    // Extract tvec/rvec values (or zeros if not found)
+    double tx = 0, ty = 0, tz = 0, rx = 0, ry = 0, rz = 0;
+    if (!tvec.empty()) {
+      tx = tvec.at<double>(0, 0);
+      ty = tvec.at<double>(1, 0);
+      tz = tvec.at<double>(2, 0);
+    }
+    if (!rvec.empty()) {
+      rx = rvec.at<double>(0, 0);
+      ry = rvec.at<double>(1, 0);
+      rz = rvec.at<double>(2, 0);
+    }
+
+    // Write CSV row
+    arLog << frameIndex << "," << std::fixed << std::setprecision(3) << cap_ms
+          << "," << pnp_ms << "," << upload_ms << "," << swap_ms << ","
+          << (found ? 1 : 0) << "," << tx << "," << ty << "," << tz << "," << rx
+          << "," << ry << "," << rz << "," << reproj_mean << ","
+          << reproj_median << "," << reproj_max << "\n";
+    arLog.flush();
+    ++frameIndex;
   }
 
   // Cleanup ImGui
