@@ -42,9 +42,21 @@ add_definitions(
 add_executable(AR
     AR/AR.cpp
     external/glad/glad.c
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_tables.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/backends/imgui_impl_glfw.cpp
+    external/imgui/backends/imgui_impl_opengl3.cpp
 )
 target_link_libraries(AR
     ${ALL_LIBS}
+)
+
+# Ensure the AR target can find the vendored ImGui headers
+target_include_directories(AR PRIVATE
+    ${CMAKE_SOURCE_DIR}/external/imgui
+    ${CMAKE_SOURCE_DIR}/external/imgui/backends
 )
 
 add_executable(CameraCalibration
